@@ -36,3 +36,4 @@ override.tf.json
 settings.tfvars
 backend.tfvars
 *.pem
+*.lock.hcl
