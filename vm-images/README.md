@@ -1,0 +1,1 @@
+This folder contains Packer HCL files for building various image types. These builds leverage the Azure CLI for authentication so that will be required.

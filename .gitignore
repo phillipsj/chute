@@ -32,7 +32,7 @@ override.tf.json
 
 .idea/
 
-# Random ignore
+# Random ignore for TF
 settings.tfvars
 backend.tfvars
 *.pem
