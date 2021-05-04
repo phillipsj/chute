@@ -11,8 +11,8 @@ variable "cloud_init_data" {
 variable "admin_creds" {
   description = "The ssh key and the user to assign the key for access to the server."
   type = object({
-    username   = string
-    password   = string
+    username = string
+    password = string
   })
 }
 
@@ -32,6 +32,12 @@ variable "network_security_group_id" {
   type        = string
 }
 
+variable "image_id" {
+  description = "The image id of the base image to use. Default `null`."
+  type        = string
+  default     = null
+}
+
 variable "image_info" {
   description = "The information for the image to use for creating the virtual machine."
   type = object({
@@ -40,6 +46,7 @@ variable "image_info" {
     sku       = string
     version   = string
   })
+  default = null
 }
 
 variable "update_server" {
@@ -58,4 +65,9 @@ variable "resource_group" {
 
 variable "public_ip_id" {
   type = string
+}
+
+variable "tags" {
+  type    = map(any)
+  default = {}
 }

@@ -14,6 +14,8 @@ resource "azurerm_network_interface" "rke_linux_node" {
     private_ip_address_allocation = "Dynamic"
     public_ip_address_id          = var.public_ip_id
   }
+
+  tags = var.tags
 }
 
 resource "azurerm_linux_virtual_machine" "rke_linux_node" {
@@ -39,11 +41,17 @@ resource "azurerm_linux_virtual_machine" "rke_linux_node" {
     storage_account_type = "Standard_LRS"
   }
 
-  source_image_reference {
+  source_image_id = var.image_id
 
-    offer     = var.image_info.offer
-    publisher = var.image_info.publisher
-    sku       = var.image_info.sku
-    version   = var.image_info.version
+  dynamic "source_image_reference" {
+    for_each = var.image_id == null ? list(1) : []
+    content {
+      publisher = var.image_info.publisher
+      offer     = var.image_info.offer
+      sku       = var.image_info.sku
+      version   = var.image_info.version
+    }
   }
+
+  tags = var.tags
 }

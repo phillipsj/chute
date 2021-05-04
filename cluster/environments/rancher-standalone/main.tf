@@ -46,8 +46,8 @@ module "vnet" {
     name     = azurerm_resource_group.rancher_rg.name
     location = azurerm_resource_group.rancher_rg.location
   }
-  vnet_name           = var.vnet_name
-  address_space       = var.address_space
+  vnet_name     = var.vnet_name
+  address_space = var.address_space
 
   tags = {
     environment = "rancher-standalone"
@@ -107,9 +107,9 @@ module "standalone" {
   vm_size                   = "Standard_D2as_v4"
   subnet_id                 = module.subnet.subnet_id
 
-  hostname        = var.hostname
-  docker_cmd      = "docker run -d --restart=unless-stopped -p 80:80 -p 443:443 --privileged rancher/rancher:${var.rancher_version_tag} --acme-domain ${azurerm_public_ip.rancher.fqdn}"
-  public_ip_id    = azurerm_public_ip.rancher.id
+  hostname     = var.hostname
+  docker_cmd   = "docker run -d --restart=unless-stopped -p 80:80 -p 443:443 --privileged rancher/rancher:${var.rancher_version_tag} --acme-domain ${azurerm_public_ip.rancher.fqdn}"
+  public_ip_id = azurerm_public_ip.rancher.id
 
   admin_ssh_key = {
     username   = "rancheradmin"
