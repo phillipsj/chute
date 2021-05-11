@@ -28,7 +28,7 @@ variable "vnet_name" {
 
 variable "private_ssh_key_path" {
   type    = string
-  default = "./rancher.pem"
+  default = "./rke2.pem"
 }
 
 variable "address_space" {

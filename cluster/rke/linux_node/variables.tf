@@ -27,11 +27,6 @@ variable "subnet_id" {
   type        = string
 }
 
-variable "network_security_group_id" {
-  description = "Id of the network security group that the Rancher server will use."
-  type        = string
-}
-
 variable "image_id" {
   description = "The image id of the base image to use. Default `null`."
   type        = string
@@ -64,7 +59,9 @@ variable "resource_group" {
 }
 
 variable "public_ip_id" {
-  type = string
+  description = "The public IP address to assign to the VM. Default is `null` so it remains unset."
+  type        = string
+  default     = null
 }
 
 variable "tags" {

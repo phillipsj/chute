@@ -18,6 +18,52 @@ resource "azurerm_resource_group" "rke2_rg" {
   location = var.region
 }
 
+resource "azurerm_storage_account" "rke2" {
+  name                     = "jprke2eus2st"
+  resource_group_name      = azurerm_resource_group.rke2_rg.name
+  location                 = azurerm_resource_group.rke2_rg.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+
+resource "azurerm_storage_container" "rke2" {
+  name                  = "rke2"
+  storage_account_name  = azurerm_storage_account.rke2.name
+  container_access_type = "private"
+}
+
+data "azurerm_storage_account_sas" "rke2" {
+  connection_string = azurerm_storage_account.rke2.primary_connection_string
+  https_only        = true
+
+  resource_types {
+    service   = true
+    container = false
+    object    = false
+  }
+
+  services {
+    blob  = true
+    queue = false
+    table = false
+    file  = false
+  }
+
+  start  = "2018-03-21T00:00:00Z"
+  expiry = "2020-03-21T00:00:00Z"
+
+  permissions {
+    read    = true
+    write   = true
+    delete  = false
+    list    = false
+    add     = true
+    create  = true
+    update  = false
+    process = false
+  }
+}
+
 data "azurerm_platform_image" "opensuse" {
   location  = azurerm_resource_group.rke2_rg.location
   publisher = "SUSE"
@@ -64,8 +110,8 @@ module "subnet" {
   var.subnet_prefix]
 }
 
-resource "azurerm_network_security_group" "rke2_server" {
-  name                = "rke2-server-sg"
+resource "azurerm_network_security_group" "rke2" {
+  name                = "jp-rke2-server-sg"
   location            = azurerm_resource_group.rke2_rg.location
   resource_group_name = azurerm_resource_group.rke2_rg.name
 
@@ -74,46 +120,16 @@ resource "azurerm_network_security_group" "rke2_server" {
   }
 }
 
-module "server_inbound_rules" {
-  source = "../../rke2/server_inbound_rules"
-
+module "cluster_inbound_rules" {
+  source                      = "../../rke2/cluster_inbound_rules"
   resource_group_name         = azurerm_resource_group.rke2_rg.name
-  network_security_group_name = azurerm_network_security_group.rke2_server.name
-}
-
-module "server_agent_inbound_rules" {
-  source = "../../rke2/server_agent_inbound_rules"
-
-  resource_group_name         = azurerm_resource_group.rke2_rg.name
-  network_security_group_name = azurerm_network_security_group.rke2_server.name
-}
-
-resource "azurerm_network_security_group" "rke2_agent" {
-  name                = "rke2-agent-sg"
-  location            = azurerm_resource_group.rke2_rg.location
-  resource_group_name = azurerm_resource_group.rke2_rg.name
-
-  tags = {
-    environment = "RKE2"
-  }
-}
-
-module "agent_inbound_rules" {
-  source = "../../rke2/agent_inbound_rules"
-
-  resource_group_name         = azurerm_resource_group.rke2_rg.name
-  network_security_group_name = azurerm_network_security_group.rke2_agent.name
-}
-
-module "agent_server_inbound_rules" {
-  source = "../../rke2/server_agent_inbound_rules"
-
-  resource_group_name         = azurerm_resource_group.rke2_rg.name
-  network_security_group_name = azurerm_network_security_group.rke2_agent.name
+  subnet_id                   = module.subnet.subnet_id
+  network_security_group_name = azurerm_network_security_group.rke2.name
+  network_security_group_id   = azurerm_network_security_group.rke2.id
 }
 
 resource "azurerm_public_ip" "rke2_server" {
-  name                = "rke2-pip"
+  name                = "rke2server-pip"
   location            = azurerm_resource_group.rke2_rg.location
   resource_group_name = azurerm_resource_group.rke2_rg.name
   allocation_method   = "Dynamic"
@@ -121,19 +137,23 @@ resource "azurerm_public_ip" "rke2_server" {
 }
 
 module "server_cloud_init" {
-  source = "../../rke2/server_cloud_init"
+  source               = "../../rke2/server_cloud_init"
+  update_server        = false
+  sas_token            = data.azurerm_storage_account_sas.rke2.sas
+  storage_account_name = azurerm_storage_account.rke2.name
+  container_name       = azurerm_storage_container.rke2.name
 }
 
 module "server" {
-  source = "../../rke/linux-node"
+  source = "../../rke/linux_node"
 
   resource_group = {
     name     = azurerm_resource_group.rke2_rg.name
     location = azurerm_resource_group.rke2_rg.location
   }
-  network_security_group_id = azurerm_network_security_group.rke2_server.id
-  vm_size                   = "Standard_D2as_v4"
-  subnet_id                 = module.subnet.subnet_id
+
+  vm_size   = "Standard_D2as_v4"
+  subnet_id = module.subnet.subnet_id
 
   hostname     = var.server_hostname
   public_ip_id = azurerm_public_ip.rke2_server.id
@@ -154,24 +174,25 @@ module "server" {
 }
 
 module "agent_cloud_init" {
-  source     = "../../rke2/agent_cloud_init"
-  token      = ""
-  rke_server = ""
+  source               = "../../rke2/agent_cloud_init"
+  sas_token            = data.azurerm_storage_account_sas.rke2.sas
+  storage_account_name = azurerm_storage_account.rke2.name
+  container_name       = azurerm_storage_container.rke2.name
+  rke_server           = var.server_hostname
 }
 
 module "agent_one" {
-  source = "../../rke/linux-node"
+  source = "../../rke/linux_node"
 
   resource_group = {
     name     = azurerm_resource_group.rke2_rg.name
     location = azurerm_resource_group.rke2_rg.location
   }
-  network_security_group_id = azurerm_network_security_group.rke2_agent.id
-  vm_size                   = "Standard_D2as_v4"
-  subnet_id                 = module.subnet.subnet_id
 
-  hostname     = "rke2agent1"
-  public_ip_id = azurerm_public_ip.rke2_server.id
+  vm_size   = "Standard_D2as_v4"
+  subnet_id = module.subnet.subnet_id
+
+  hostname = "jprke2agent1"
 
   admin_ssh_key = {
     username   = "rkeserveradmin"

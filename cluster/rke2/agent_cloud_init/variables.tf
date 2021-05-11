@@ -4,12 +4,22 @@ variable "update_server" {
   default     = true
 }
 
-variable "token" {
-  description = "RKE2 Token"
+variable "rke_server" {
+  description = "RKE2 Server URL."
   type        = string
 }
 
-variable "rke_server" {
-  description = "RKE2 Server URL."
+variable "storage_account_name" {
+  description = "The storage account to upload the token."
+  type        = string
+}
+
+variable "sas_token" {
+  description = "The SAS token for the storage account."
+  type        = string
+}
+
+variable "container_name" {
+  description = "Azure Blob storage container that has the token."
   type        = string
 }
